@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Tareas del Salón</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f8;
+      color: #333;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    table {
+      width: 80%;
+      margin: 20px auto;
+      border-collapse: collapse;
+      background-color: white;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+      text-align: center;
+    }
+    th {
+      background-color: #3498db;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    .atrasada {
+      background-color: #ffcccc !important;
+    }
+    .proxima {
+      background-color: #fff2cc !important;
+    }
+    .normal {
+      background-color: #ccffcc !important;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Lista de Tareas del Salón</h1>
+  <table id="tareasTable">
+    <thead>
+      <tr>
+        <th>Tarea</th>
+        <th>Materia</th>
+        <th>Fecha de Entrega</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const csvURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTGaI7EJ8YLkbnd2LkBo0p_HyZ4clItraV0Kx5C_AEakFaFC3813oYohfnSSKKkclFnIj7it4FeKqSt/pub?output=csv";
+
+    // Función para convertir fechas como 12/07/21 a un Date correcto
+    function parseDate(dateStr) {
+      const parts = dateStr.trim().split(/[\/\-]/);
+      if (parts.length === 3) {
+        let day, month, year;
+        // Detectar si el primer número es día o mes (suponemos formato latino: DD/MM/YY)
+        if (parseInt(parts[0]) > 12) {
+          day = parts[0];
+          month = parts[1];
+        } else {
+          day = parts[0];
+          month = parts[1];
+        }
+        year = parts[2].length === 2 ? "20" + parts[2] : parts[2];
+        return new Date(`${year}-${month}-${day}`);
+      }
+      return new Date(dateStr); // fallback
+    }
+
+    fetch(csvURL)
+      .then(response => response.text())
+      .then(csvText => {
+        const rows = csvText.split("\n").map(r => r.split(","));
+        const tbody = document.querySelector("#tareasTable tbody");
+
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (row.length < 3) continue;
+
+          const tarea = row[0];
+          const materia = row[1];
+          const fecha = row[2];
+
+          const tr = document.createElement("tr");
+          const fechaEntrega = parseDate(fecha);
+          const hoy = new Date();
+          const diff = (fechaEntrega - hoy) / (1000 * 60 * 60 * 24);
+          let estadoClase = "normal";
+          if (diff < 0) estadoClase = "atrasada";
+          else if (diff <= 2) estadoClase = "proxima";
+
+          tr.className = estadoClase;
+
+          tr.innerHTML = `
+            <td>${tarea}</td>
+            <td>${materia}</td>
+            <td>${fecha}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+      })
+      .catch(error => console.error("Error cargando datos:", error));
+  </script>
+
+</body>
+</html>
