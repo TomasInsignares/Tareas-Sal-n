@@ -4,10 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lista de Tareas del Salón</title>
-
-  <!-- FullCalendar CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/main.min.css" rel="stylesheet">
-
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -18,22 +14,6 @@
     }
     h1 {
       color: #2c3e50;
-      margin-bottom: 10px;
-    }
-    .buttons {
-      margin-bottom: 15px;
-    }
-    button {
-      background-color: #3498db;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      margin: 5px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #2980b9;
     }
     table {
       width: 80%;
@@ -65,25 +45,11 @@
     .normal {
       background-color: #ccffcc !important;
     }
-    #calendar {
-      max-width: 90%;
-      margin: 40px auto;
-      background-color: white;
-      padding: 10px;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
   </style>
 </head>
 <body>
 
   <h1>Lista de Tareas del Salón</h1>
-
-  <div class="buttons">
-    <button onclick="ordenarPorFecha()">Ordenar por fecha (próximas primero)</button>
-    <button onclick="ordenarAtrasadasPrimero()">Ordenar con atrasadas primero</button>
-  </div>
-
   <table id="tareasTable">
     <thead>
       <tr>
@@ -95,16 +61,10 @@
     <tbody></tbody>
   </table>
 
-  <div id="calendar"></div>
-
-  <!-- FullCalendar JS -->
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/main.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/locales-all.min.js"></script>
-
   <script>
     const csvURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTGaI7EJ8YLkbnd2LkBo0p_HyZ4clItraV0Kx5C_AEakFaFC3813oYohfnSSKKkclFnIj7it4FeKqSt/pub?output=csv";
-    let tareas = [];
 
+    // Convierte fechas tipo 12/07/21 o 12-07-21 a un objeto Date
     function parseDate(dateStr) {
       const parts = dateStr.trim().split(/[\/\-]/);
       if (parts.length === 3) {
@@ -116,89 +76,46 @@
       return new Date(dateStr);
     }
 
-    function renderTabla() {
-      const tbody = document.querySelector("#tareasTable tbody");
-      tbody.innerHTML = "";
-      const hoy = new Date();
-
-      tareas.forEach(t => {
-        const tr = document.createElement("tr");
-        const diff = (t.fecha - hoy) / (1000 * 60 * 60 * 24);
-        let estadoClase = "normal";
-        if (diff < 0) estadoClase = "atrasada";
-        else if (diff <= 2) estadoClase = "proxima";
-
-        tr.className = estadoClase;
-        tr.innerHTML = `
-          <td>${t.tarea}</td>
-          <td>${t.materia}</td>
-          <td>${t.fechaStr}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function ordenarPorFecha() {
-      tareas.sort((a, b) => a.fecha - b.fecha);
-      renderTabla();
-    }
-
-    function ordenarAtrasadasPrimero() {
-      tareas.sort((a, b) => {
-        const hoy = new Date();
-        const diffA = a.fecha - hoy;
-        const diffB = b.fecha - hoy;
-        const atrasadaA = diffA < 0 ? 1 : 0;
-        const atrasadaB = diffB < 0 ? 1 : 0;
-        return atrasadaB - atrasadaA || a.fecha - b.fecha;
-      });
-      renderTabla();
-    }
-
-    function renderCalendario() {
-      const calendarEl = document.getElementById('calendar');
-      const hoy = new Date();
-
-      const events = tareas.map(t => {
-        const diff = (t.fecha - hoy) / (1000 * 60 * 60 * 24);
-        let color = "#2ecc71"; // verde por defecto
-        if (diff < 0) color = "#e74c3c"; // rojo
-        else if (diff <= 2) color = "#f1c40f"; // amarillo
-
-        return {
-          title: `${t.tarea} (${t.materia})`,
-          start: t.fecha.toISOString().split("T")[0],
-          color: color
-        };
-      });
-
-      const calendar = new FullCalendar.Calendar(calendarEl, {
-        locale: 'es',
-        initialView: 'dayGridMonth',
-        height: 'auto',
-        events: events
-      });
-
-      calendar.render();
-    }
-
     fetch(csvURL)
       .then(response => response.text())
       .then(csvText => {
         const rows = csvText.split("\n").map(r => r.split(","));
-        tareas = [];
+        const tbody = document.querySelector("#tareasTable tbody");
+        
+        // Convertimos los datos a un arreglo con objetos para poder ordenarlos
+        let tareas = [];
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
           if (row.length < 3) continue;
+          const fecha = parseDate(row[2]);
           tareas.push({
             tarea: row[0],
             materia: row[1],
             fechaStr: row[2],
-            fecha: parseDate(row[2])
+            fecha: fecha
           });
         }
-        ordenarPorFecha(); // orden inicial
-        renderCalendario(); // carga el calendario
+
+        // Ordenamos por fecha (más próxima primero)
+        tareas.sort((a, b) => a.fecha - b.fecha);
+
+        // Pintamos las filas ordenadas
+        const hoy = new Date();
+        tareas.forEach(t => {
+          const tr = document.createElement("tr");
+          const diff = (t.fecha - hoy) / (1000 * 60 * 60 * 24);
+          let estadoClase = "normal";
+          if (diff < 0) estadoClase = "atrasada";
+          else if (diff <= 2) estadoClase = "proxima";
+
+          tr.className = estadoClase;
+          tr.innerHTML = `
+            <td>${t.tarea}</td>
+            <td>${t.materia}</td>
+            <td>${t.fechaStr}</td>
+          `;
+          tbody.appendChild(tr);
+        });
       })
       .catch(error => console.error("Error cargando datos:", error));
   </script>
