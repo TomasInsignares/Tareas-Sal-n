@@ -14,6 +14,11 @@
     }
     h1 {
       color: #2c3e50;
+      margin-bottom: 10px;
+    }
+    h2 {
+      color: #34495e;
+      margin-top: 20px;
     }
     table {
       width: 80%;
@@ -50,6 +55,15 @@
 <body>
 
   <h1>Lista de Tareas del Salón</h1>
+
+  <h2>¿Cómo se usa?</h2>
+  <p>
+    Esta página muestra las tareas pendientes.  
+    <b>Verde</b>: más de 2 días para entregar.  
+    <b>Amarillo</b>: faltan 2 o menos días.  
+    <b>Rojo</b>: tarea vencida.
+  </p>
+
   <table id="tareasTable">
     <thead>
       <tr>
@@ -64,7 +78,6 @@
   <script>
     const csvURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTGaI7EJ8YLkbnd2LkBo0p_HyZ4clItraV0Kx5C_AEakFaFC3813oYohfnSSKKkclFnIj7it4FeKqSt/pub?output=csv";
 
-    // Convierte fechas tipo 12/07/21 o 12-07-21 a un objeto Date
     function parseDate(dateStr) {
       const parts = dateStr.trim().split(/[\/\-]/);
       if (parts.length === 3) {
@@ -81,41 +94,28 @@
       .then(csvText => {
         const rows = csvText.split("\n").map(r => r.split(","));
         const tbody = document.querySelector("#tareasTable tbody");
-        
-        // Convertimos los datos a un arreglo con objetos para poder ordenarlos
-        let tareas = [];
+        const hoy = new Date();
+
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i];
           if (row.length < 3) continue;
+
           const fecha = parseDate(row[2]);
-          tareas.push({
-            tarea: row[0],
-            materia: row[1],
-            fechaStr: row[2],
-            fecha: fecha
-          });
-        }
+          const diff = (fecha - hoy) / (1000 * 60 * 60 * 24);
 
-        // Ordenamos por fecha (más próxima primero)
-        tareas.sort((a, b) => a.fecha - b.fecha);
-
-        // Pintamos las filas ordenadas
-        const hoy = new Date();
-        tareas.forEach(t => {
-          const tr = document.createElement("tr");
-          const diff = (t.fecha - hoy) / (1000 * 60 * 60 * 24);
           let estadoClase = "normal";
           if (diff < 0) estadoClase = "atrasada";
           else if (diff <= 2) estadoClase = "proxima";
 
+          const tr = document.createElement("tr");
           tr.className = estadoClase;
           tr.innerHTML = `
-            <td>${t.tarea}</td>
-            <td>${t.materia}</td>
-            <td>${t.fechaStr}</td>
+            <td>${row[0]}</td>
+            <td>${row[1]}</td>
+            <td>${row[2]}</td>
           `;
           tbody.appendChild(tr);
-        });
+        }
       })
       .catch(error => console.error("Error cargando datos:", error));
   </script>
